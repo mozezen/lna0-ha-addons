@@ -1,0 +1,19 @@
+name: Add-on CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Verify Agent package import path
+        working-directory: lna0_agent
+        run: |
+          PYTHONPATH="$PWD/rootfs/app:$PWD/rootfs/app/shared:$PWD/rootfs/app/agent" \
+            python -c "import lna0_agent; import lna0_shared"

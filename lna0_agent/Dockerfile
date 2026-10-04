@@ -3,13 +3,13 @@ FROM ${BUILD_FROM}
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH=/app/shared:/app/agent
+    PYTHONPATH=/app:/app/shared:/app/agent
 
 WORKDIR /app
 COPY rootfs/app /app
 COPY run.sh /run.sh
 
 RUN chmod a+x /run.sh
+RUN python -c "import lna0_agent; import lna0_shared"
 
 CMD ["/run.sh"]
-
