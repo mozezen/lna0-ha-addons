@@ -1,4 +1,7 @@
 #!/usr/bin/env sh
 set -eu
-exec python -m lna0_agent
 
+export PYTHONPATH="/app/agent:/app/shared${PYTHONPATH:+:$PYTHONPATH}"
+cd /app/agent
+
+exec python -m lna0_agent
