@@ -1,0 +1,38 @@
+name: LNA0 Agent
+version: "0.1.0"
+slug: lna0_agent
+description: Outbound-only LNA0 Operations Platform node agent
+url: "https://example.invalid/lna0-home-assistant-addons/lna0_agent"
+arch:
+  - amd64
+startup: services
+boot: auto
+watchdog: true
+hassio_api: true
+hassio_role: admin
+homeassistant_api: false
+docker_api: false
+host_network: false
+full_access: false
+init: false
+ports: {}
+map: []
+options:
+  control_plane_url: "https://control.lna0.local"
+  house_id: "LNA0-H-000001"
+  node_id: "LNA0-N-000001"
+  hostname: "lna0-n-000001"
+  enrollment_token: ""
+  heartbeat_interval_seconds: 60
+  control_plane_ca_pem: ""
+  allow_insecure_dev_http: false
+schema:
+  control_plane_url: url
+  house_id: str
+  node_id: str
+  hostname: str
+  enrollment_token: password
+  heartbeat_interval_seconds: int(30,300)
+  control_plane_ca_pem: str?
+  allow_insecure_dev_http: bool
+
