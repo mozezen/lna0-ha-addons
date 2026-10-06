@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/command/with-contenv sh
 set -eu
 
 export PYTHONPATH="/app/agent:/app/shared${PYTHONPATH:+:$PYTHONPATH}"

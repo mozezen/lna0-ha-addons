@@ -1,5 +1,5 @@
 name: LNA0 Agent
-version: "0.1.4"
+version: "0.1.5"
 slug: lna0_agent
 description: Outbound-only LNA0 Operations Platform node agent
 url: "https://example.invalid/lna0-home-assistant-addons/lna0_agent"
