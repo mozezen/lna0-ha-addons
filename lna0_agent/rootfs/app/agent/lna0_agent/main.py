@@ -17,6 +17,8 @@ from .operations import OperationAdapter
 from .state import load_state, save_state
 from .supervisor import SupervisorClient, collect_heartbeat
 
+_supervisor_runtime_logged = False
+
 
 def log(level: str, message: str, **fields: Any) -> None:
     print(json.dumps(redact({"level": level, "message": message, **fields}), separators=(",", ":")), flush=True)
@@ -91,8 +93,12 @@ def poll_operation(config: AgentConfig, supervisor: SupervisorClient, credential
         error_code = None
     except Exception as exc:
         status = "rejected"
-        summary = type(exc).__name__
         error_code = type(exc).__name__
+        detail = str(redact(str(exc)))
+        if config.supervisor_token:
+            detail = detail.replace(config.supervisor_token, "[REDACTED]")
+        summary = f"{error_code}: {detail}"[:512]
+        log("warning", "operation failed", operation_id=operation_id, error=error_code, detail=detail)
     signed_request(
         method="POST",
         url=f"{config.control_plane_url}/api/v1/nodes/{config.node_id}/operations/{operation_id}/result",
@@ -104,6 +110,15 @@ def poll_operation(config: AgentConfig, supervisor: SupervisorClient, credential
 
 
 def run_once(config: AgentConfig) -> None:
+    global _supervisor_runtime_logged
+    if not _supervisor_runtime_logged:
+        log(
+            "info",
+            "supervisor runtime configured",
+            supervisor_base_url=config.supervisor_base_url,
+            supervisor_token_available=bool(config.supervisor_token),
+        )
+        _supervisor_runtime_logged = True
     credential = ensure_enrolled(config)
     supervisor = SupervisorClient(config.supervisor_base_url, config.supervisor_token)
     if config.enrollment_token:

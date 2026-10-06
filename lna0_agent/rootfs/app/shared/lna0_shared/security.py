@@ -6,6 +6,7 @@ import base64
 import hashlib
 import hmac
 import json
+import re
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -17,6 +18,10 @@ SECRET_FIELD_FRAGMENTS = (
     "token",
     "password",
     "private_key",
+)
+SECRET_VALUE_PATTERNS = (
+    re.compile(r"(?i)(bearer\s+)[A-Za-z0-9._~+/=-]+"),
+    re.compile(r"\b(?:enr_|node_)[A-Za-z0-9_-]{20,}\b"),
 )
 
 
@@ -122,10 +127,17 @@ def redact(value: Any) -> Any:
         for key, item in value.items():
             lowered = str(key).lower()
             if any(fragment in lowered for fragment in SECRET_FIELD_FRAGMENTS):
-                cleaned[key] = "[REDACTED]"
+                if isinstance(item, bool) and lowered.endswith("_available"):
+                    cleaned[key] = item
+                else:
+                    cleaned[key] = "[REDACTED]"
             else:
                 cleaned[key] = redact(item)
         return cleaned
     if isinstance(value, list):
         return [redact(item) for item in value]
+    if isinstance(value, str):
+        for pattern in SECRET_VALUE_PATTERNS:
+            value = pattern.sub(r"\1[REDACTED]" if pattern.groups else "[REDACTED]", value)
+        return value
     return value
