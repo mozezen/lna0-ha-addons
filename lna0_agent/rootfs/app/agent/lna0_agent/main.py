@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import random
 import time
 from typing import Any
@@ -17,11 +18,26 @@ from .operations import OperationAdapter
 from .state import load_state, save_state
 from .supervisor import SupervisorClient, collect_heartbeat
 
+_supervisor_environment_logged = False
 _supervisor_runtime_logged = False
 
 
 def log(level: str, message: str, **fields: Any) -> None:
     print(json.dumps(redact({"level": level, "message": message, **fields}), separators=(",", ":")), flush=True)
+
+
+def log_supervisor_environment_diagnostic() -> None:
+    global _supervisor_environment_logged
+    if _supervisor_environment_logged:
+        return
+    log(
+        "info",
+        "supervisor environment diagnostic",
+        supervisor_token_available=bool(os.environ.get("SUPERVISOR_TOKEN")),
+        supervisor_env_available=bool(os.environ.get("SUPERVISOR")),
+        environment_keys=sorted(key for key in os.environ if key.startswith("SUPERVISOR")),
+    )
+    _supervisor_environment_logged = True
 
 
 def ensure_enrolled(config: AgentConfig) -> str:
@@ -131,6 +147,7 @@ def run_once(config: AgentConfig) -> None:
 
 
 def main() -> None:
+    log_supervisor_environment_diagnostic()
     config = load_config()
     backoff = 5
     while True:
