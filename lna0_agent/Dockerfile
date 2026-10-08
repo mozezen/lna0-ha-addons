@@ -3,13 +3,13 @@ FROM ${BUILD_FROM}
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH=/app:/app/shared:/app/agent
+    PYTHONPATH=/app/shared:/app/agent
 
 WORKDIR /app
-COPY rootfs/app /app
-COPY run.sh /run.sh
+COPY shared /app/shared
+COPY agent/lna0_agent /app/agent/lna0_agent
+COPY agent/home-assistant-addon/run.sh /run.sh
 
 RUN chmod a+x /run.sh
-RUN python -c "import lna0_agent; import lna0_shared"
 
 CMD ["/run.sh"]

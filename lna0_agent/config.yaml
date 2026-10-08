@@ -1,12 +1,13 @@
 name: LNA0 Agent
-version: "0.1.5"
+version: "0.1.6"
 slug: lna0_agent
 description: Outbound-only LNA0 Operations Platform node agent
-url: "https://example.invalid/lna0-home-assistant-addons/lna0_agent"
+url: "https://lna0.local/addons/lna0-agent"
 arch:
   - amd64
 startup: services
 boot: auto
+watchdog: true
 hassio_api: true
 hassio_role: admin
 homeassistant_api: false
@@ -34,4 +35,3 @@ schema:
   heartbeat_interval_seconds: int(30,300)
   control_plane_ca_pem: str?
   allow_insecure_dev_http: bool
-

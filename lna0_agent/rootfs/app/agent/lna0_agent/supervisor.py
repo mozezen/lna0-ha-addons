@@ -67,7 +67,12 @@ def collect_heartbeat(
     fallback_haos_version: str = "unknown",
     fallback_core_version: str = "unknown",
 ) -> dict[str, Any]:
-    from lna0_shared.constants import SCHEMA_VERSION
+    from lna0_shared.constants import (
+        FEATURE_MANIFEST_SCHEMA_VERSION,
+        GOLDEN_BASE_VERSION,
+        HOUSE_CONFIG_SCHEMA_VERSION,
+        SCHEMA_VERSION,
+    )
     from lna0_shared.security import utc_iso
 
     supervisor_info: dict[str, Any] = {}
@@ -95,6 +100,9 @@ def collect_heartbeat(
         "house_id": house_id,
         "hostname": hostname,
         "agent_version": agent_version,
+        "golden_base_version": GOLDEN_BASE_VERSION,
+        "house_config_schema_version": HOUSE_CONFIG_SCHEMA_VERSION,
+        "feature_manifest_schema_version": FEATURE_MANIFEST_SCHEMA_VERSION,
         "status": "online",
         "haos_version": haos_version,
         "core_version": core_version,
