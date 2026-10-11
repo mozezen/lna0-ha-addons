@@ -13,6 +13,8 @@ from lna0_shared.constants import (
     MIN_HEARTBEAT_INTERVAL_SECONDS,
 )
 
+from .status import DEFAULT_STATUS_PATH
+
 
 @dataclass
 class AgentConfig:
@@ -22,6 +24,7 @@ class AgentConfig:
     hostname: str
     enrollment_token: str | None
     state_path: Path
+    status_path: Path
     heartbeat_interval_seconds: int
     supervisor_base_url: str
     supervisor_token: str | None
@@ -66,6 +69,7 @@ def load_config() -> AgentConfig:
         hostname=hostname,
         enrollment_token=get("enrollment_token"),
         state_path=Path(get("state_path", "/data/lna0-agent-state.json") or "/data/lna0-agent-state.json"),
+        status_path=Path(get("status_path", str(DEFAULT_STATUS_PATH)) or str(DEFAULT_STATUS_PATH)),
         heartbeat_interval_seconds=interval,
         supervisor_base_url=get("supervisor_base_url", "http://supervisor") or "http://supervisor",
         supervisor_token=os.environ.get("SUPERVISOR_TOKEN") or get("supervisor_token"),

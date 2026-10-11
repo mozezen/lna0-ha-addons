@@ -1,5 +1,5 @@
 name: LNA0 Agent
-version: "0.1.6"
+version: "0.1.7"
 slug: lna0_agent
 description: Outbound-only LNA0 Operations Platform node agent
 url: "https://lna0.local/addons/lna0-agent"
@@ -15,7 +15,8 @@ host_network: false
 full_access: false
 init: false
 ports: {}
-map: []
+map:
+  - config:rw
 options:
   control_plane_url: "https://control.lna0.local"
   house_id: "LNA0-H-000001"

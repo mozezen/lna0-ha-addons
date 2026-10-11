@@ -16,6 +16,7 @@ from .config import AgentConfig, load_config
 from .http_client import HttpJsonError, post_json, signed_request
 from .operations import OperationAdapter
 from .state import load_state, save_state
+from .status import publish_status
 from .supervisor import SupervisorClient, collect_heartbeat
 
 _supervisor_environment_logged = False
@@ -44,8 +45,10 @@ def ensure_enrolled(config: AgentConfig) -> str:
     state = load_state(config.state_path)
     credential = state.get("credential")
     if isinstance(credential, str) and credential:
+        _publish_agent_status(config, status="enrolled", credential_status="unknown")
         return credential
     if not config.enrollment_token:
+        _publish_agent_status(config, status="not_enrolled", credential_status="missing")
         raise RuntimeError("Agent is not enrolled and no enrollment_token is configured")
     response = post_json(
         f"{config.control_plane_url}/api/v1/nodes/enroll",
@@ -63,6 +66,7 @@ def ensure_enrolled(config: AgentConfig) -> str:
     if not isinstance(credential, str) or not credential:
         raise RuntimeError("Enrollment response did not include a credential")
     save_state(config.state_path, {"credential": credential, "node_id": config.node_id, "house_id": config.house_id})
+    _publish_agent_status(config, status="enrolled", credential_status="unknown")
     log("info", "node enrolled", node_id=config.node_id)
     return credential
 
@@ -86,7 +90,21 @@ def send_heartbeat(config: AgentConfig, supervisor: SupervisorClient, credential
         ca_pem=config.control_plane_ca_pem,
         allow_insecure_dev_http=config.allow_insecure_dev_http,
     )
+    _publish_agent_status(config, status="enrolled", credential_status="active")
     log("info", "heartbeat sent", node_id=config.node_id)
+
+
+def _publish_agent_status(config: AgentConfig, *, status: str, credential_status: str) -> None:
+    try:
+        publish_status(
+            config.status_path,
+            status=status,
+            node_id=config.node_id,
+            house_id=config.house_id,
+            credential_status=credential_status,
+        )
+    except Exception as exc:
+        log("warning", "agent status projection failed", error=type(exc).__name__)
 
 
 def poll_operation(config: AgentConfig, supervisor: SupervisorClient, credential: str) -> None:
