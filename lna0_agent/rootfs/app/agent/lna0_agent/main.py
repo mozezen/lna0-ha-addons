@@ -12,6 +12,7 @@ from lna0_shared.constants import AGENT_VERSION
 from lna0_shared.security import redact
 from lna0_shared.validation import validate_heartbeat
 
+from .commissioning import CommissioningArtifactsUnavailable, report_completed_commissioning
 from .config import AgentConfig, load_config
 from .http_client import HttpJsonError, post_json, signed_request
 from .operations import OperationAdapter
@@ -162,6 +163,16 @@ def run_once(config: AgentConfig) -> None:
             log("warning", "unable to clear enrollment token from add-on options", node_id=config.node_id)
     send_heartbeat(config, supervisor, credential)
     poll_operation(config, supervisor, credential)
+    try:
+        result = report_completed_commissioning(config, credential)
+        if result in {"accepted", "already_recorded"}:
+            log("info", "commissioning report acknowledged", node_id=config.node_id, status=result)
+        elif result == "conflict":
+            log("warning", "commissioning report conflict recorded", node_id=config.node_id)
+    except CommissioningArtifactsUnavailable as exc:
+        log("warning", "commissioning artifacts not reportable", error=type(exc).__name__)
+    except HttpJsonError as exc:
+        log("warning", "commissioning report request failed", status=exc.status)
 
 
 def main() -> None:

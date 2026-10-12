@@ -10,6 +10,11 @@ from .security import parse_utc_iso
 
 NODE_ID_RE = re.compile(r"^LNA0-N-\d{6}$")
 HOUSE_ID_RE = re.compile(r"^LNA0-H-\d{6}$")
+COMMISSIONING_ID_RE = re.compile(r"^LNA0-COM-\d{6}$")
+SHA256_REF_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
+SAFE_REF_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/@:#=%-]{0,511}$")
+SECRET_KEY_RE = re.compile(r"(authorization|auth|credential|password|private[_-]?key|api[_-]?key|secret|token)", re.IGNORECASE)
+SECRET_VALUE_RE = re.compile(r"(?i)(bearer\s+[A-Za-z0-9._~+/=-]+|\b(?:enr_|node_)[A-Za-z0-9_-]{20,}\b|password\s*[:=]|token\s*[:=]|api[_-]?key\s*[:=]|private[_-]?key\s*[:=]|credential\s*[:=])")
 
 
 class ValidationError(ValueError):
@@ -51,6 +56,12 @@ def validate_house_id(house_id: str) -> str:
     if not isinstance(house_id, str) or not HOUSE_ID_RE.match(house_id):
         raise ValidationError(f"house_id must look like {HOUSE_ID_PREFIX}000001")
     return house_id
+
+
+def validate_commissioning_id(commissioning_id: str) -> str:
+    if not isinstance(commissioning_id, str) or not COMMISSIONING_ID_RE.match(commissioning_id):
+        raise ValidationError("commissioning_id must look like LNA0-COM-000001")
+    return commissioning_id
 
 
 def validate_hostname(hostname: str) -> str:
@@ -166,4 +177,86 @@ def validate_operation_create(data: dict[str, Any], node_id: str) -> dict[str, A
         "expires_in_seconds": expires,
         "requested_by": requested_by,
     }
+
+
+def validate_commissioning_report(data: dict[str, Any]) -> dict[str, Any]:
+    _reject_secret_like_material(data)
+    _require_exact_keys(
+        data,
+        {
+            "schema_version",
+            "commissioning_id",
+            "node_id",
+            "house_id",
+            "status",
+            "validation_status",
+            "backup_status",
+            "backup_ref",
+            "handover_status",
+            "handover_report_ref",
+            "handover_report_hash",
+            "completed_at",
+            "golden_base_version",
+            "agent_version",
+            "house_config_hash",
+            "feature_manifest_hash",
+        },
+    )
+    if data["schema_version"] != 1:
+        raise ValidationError("unsupported schema_version")
+    if data["status"] != "completed":
+        raise ValidationError("commissioning status must be completed")
+    for key in ("validation_status", "backup_status", "handover_status"):
+        if data[key] != "passed":
+            raise ValidationError(f"{key} must be passed")
+    completed_at = _require_string(data, "completed_at", max_len=64)
+    try:
+        parse_utc_iso(completed_at)
+    except Exception as exc:
+        raise ValidationError("completed_at must be ISO-8601 with timezone") from exc
+    return {
+        "schema_version": 1,
+        "commissioning_id": validate_commissioning_id(_require_string(data, "commissioning_id")),
+        "node_id": validate_node_id(_require_string(data, "node_id")),
+        "house_id": validate_house_id(_require_string(data, "house_id")),
+        "status": "completed",
+        "validation_status": "passed",
+        "backup_status": "passed",
+        "backup_ref": _require_safe_ref(data, "backup_ref"),
+        "handover_status": "passed",
+        "handover_report_ref": _require_safe_ref(data, "handover_report_ref"),
+        "handover_report_hash": _require_sha256_ref(data, "handover_report_hash"),
+        "completed_at": completed_at,
+        "golden_base_version": _require_string(data, "golden_base_version", max_len=32),
+        "agent_version": _require_string(data, "agent_version", max_len=32),
+        "house_config_hash": _require_sha256_ref(data, "house_config_hash"),
+        "feature_manifest_hash": _require_sha256_ref(data, "feature_manifest_hash"),
+    }
+
+
+def _require_sha256_ref(data: dict[str, Any], key: str) -> str:
+    value = _require_string(data, key, min_len=71, max_len=71)
+    if not SHA256_REF_RE.match(value):
+        raise ValidationError(f"{key} must be a sha256 content hash")
+    return value
+
+
+def _require_safe_ref(data: dict[str, Any], key: str) -> str:
+    value = _require_string(data, key, max_len=512)
+    if not SAFE_REF_RE.match(value) or SECRET_VALUE_RE.search(value):
+        raise ValidationError(f"{key} must be a safe reference")
+    return value
+
+
+def _reject_secret_like_material(value: Any) -> None:
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if SECRET_KEY_RE.search(str(key)) and str(key) not in {"handover_report_hash"}:
+                raise ValidationError("request must not contain secret-looking keys")
+            _reject_secret_like_material(item)
+    elif isinstance(value, list):
+        for item in value:
+            _reject_secret_like_material(item)
+    elif isinstance(value, str) and SECRET_VALUE_RE.search(value):
+        raise ValidationError("request must not contain secret-looking values")
 

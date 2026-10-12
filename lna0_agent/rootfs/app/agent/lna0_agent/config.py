@@ -25,6 +25,8 @@ class AgentConfig:
     enrollment_token: str | None
     state_path: Path
     status_path: Path
+    commissioning_state_path: Path
+    commissioning_handover_path: Path
     heartbeat_interval_seconds: int
     supervisor_base_url: str
     supervisor_token: str | None
@@ -70,6 +72,8 @@ def load_config() -> AgentConfig:
         enrollment_token=get("enrollment_token"),
         state_path=Path(get("state_path", "/data/lna0-agent-state.json") or "/data/lna0-agent-state.json"),
         status_path=Path(get("status_path", str(DEFAULT_STATUS_PATH)) or str(DEFAULT_STATUS_PATH)),
+        commissioning_state_path=Path(get("commissioning_state_path", "/config/lna0/commissioning/state.yaml") or "/config/lna0/commissioning/state.yaml"),
+        commissioning_handover_path=Path(get("commissioning_handover_path", "/config/lna0/commissioning/handover.json") or "/config/lna0/commissioning/handover.json"),
         heartbeat_interval_seconds=interval,
         supervisor_base_url=get("supervisor_base_url", "http://supervisor") or "http://supervisor",
         supervisor_token=os.environ.get("SUPERVISOR_TOKEN") or get("supervisor_token"),
