@@ -1,0 +1,31 @@
+name: LNA0 Remote Access
+version: "0.1.0"
+slug: lna0_remote_access
+description: Outbound-only SniTun remote access for Home Assistant, with TLS terminated inside the home
+arch:
+  - amd64
+startup: application
+boot: manual
+init: false
+host_network: false
+full_access: false
+hassio_api: false
+homeassistant_api: false
+docker_api: false
+ports: {}
+map:
+  - ssl:ro
+options:
+  gateway_host: remote.55projects.com
+  gateway_port: 443
+  public_hostname: ""
+  homeassistant_port: 80
+  certificate_file: fullchain.pem
+  private_key_file: privkey.pem
+schema:
+  gateway_host: str
+  gateway_port: int(1,65535)
+  public_hostname: str
+  homeassistant_port: int(1,65535)
+  certificate_file: str
+  private_key_file: str
