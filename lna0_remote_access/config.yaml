@@ -1,5 +1,5 @@
 name: LNA0 Remote Access
-version: "0.1.0"
+version: "0.1.1"
 slug: lna0_remote_access
 description: Outbound-only SniTun remote access for Home Assistant, with TLS terminated inside the home
 arch:
@@ -7,6 +7,7 @@ arch:
 startup: application
 boot: manual
 init: false
+stdin: true
 host_network: false
 full_access: false
 hassio_api: false

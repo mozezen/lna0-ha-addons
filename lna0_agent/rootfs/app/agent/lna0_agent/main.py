@@ -16,6 +16,7 @@ from .commissioning import CommissioningArtifactsUnavailable, report_completed_c
 from .config import AgentConfig, load_config
 from .http_client import HttpJsonError, post_json, signed_request
 from .operations import OperationAdapter
+from .remote_provision import provision_remote_access
 from .state import load_state, save_state
 from .status import publish_status
 from .supervisor import SupervisorClient, collect_heartbeat
@@ -162,6 +163,14 @@ def run_once(config: AgentConfig) -> None:
         else:
             log("warning", "unable to clear enrollment token from add-on options", node_id=config.node_id)
     send_heartbeat(config, supervisor, credential)
+    try:
+        remote_status = provision_remote_access(config, supervisor, credential)
+        if remote_status in {"delivered", "stopped_on_disable"}:
+            log("info", "remote access provisioning", status=remote_status)
+    except HttpJsonError as exc:
+        log("warning", "remote access provisioning request failed", status=exc.status)
+    except Exception as exc:
+        log("warning", "remote access provisioning unavailable", error=type(exc).__name__)
     poll_operation(config, supervisor, credential)
     try:
         result = report_completed_commissioning(config, credential)

@@ -18,11 +18,15 @@ import json
 import logging
 import os
 from pathlib import Path
+
+from stdin_credentials import consume_stream
 import re
 import signal
 import socket
 import ssl
 import stat
+import sys
+import threading
 import time
 
 LOG = logging.getLogger("lna0.remote_client")
@@ -186,11 +190,40 @@ async def wait_for_port(port: int, timeout: float = 10.0) -> None:
 
 
 async def run() -> None:
-    settings = settings_from_dict(json.loads(OPTIONS.read_text(encoding="utf-8")))
+    # Remain available while the Agent provisions this app; do not crash-loop.
+    missing_assignment_logged = False
+    while True:
+        try:
+            settings = settings_from_dict(json.loads(OPTIONS.read_text(encoding="utf-8")))
+            break
+        except (FileNotFoundError, OSError, InvalidConfig, ValueError, json.JSONDecodeError):
+            if not missing_assignment_logged:
+                LOG.info("WAITING_FOR_REMOTE_ASSIGNMENT")
+                missing_assignment_logged = True
+            await asyncio.sleep(5)
+
+    # Supervisor provides a private Docker stdin stream; no network listener.
+    threading.Thread(
+        target=consume_stream,
+        args=(sys.stdin.buffer, CREDENTIALS, settings.public_hostname,
+              credentials_from_dict, LOG),
+        name="ephemeral-credential-receiver",
+        daemon=True,
+    ).start()
+
     cert_file = SSL_DIR / settings.certificate_file
     key_file = SSL_DIR / settings.private_key_file
-    context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    context.load_cert_chain(str(cert_file), str(key_file))
+    missing_tls_logged = False
+    while True:
+        try:
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(str(cert_file), str(key_file))
+            break
+        except (FileNotFoundError, PermissionError, ssl.SSLError, OSError):
+            if not missing_tls_logged:
+                LOG.warning("WAITING_FOR_CUSTOMER_TLS_CERTIFICATE")
+                missing_tls_logged = True
+            await asyncio.sleep(5)
     NGINX_CONFIG.write_text(nginx_text(settings), encoding="utf-8")
     os.chmod(NGINX_CONFIG, 0o600)
     check = await asyncio.create_subprocess_exec("nginx", "-t", "-c", str(NGINX_CONFIG))

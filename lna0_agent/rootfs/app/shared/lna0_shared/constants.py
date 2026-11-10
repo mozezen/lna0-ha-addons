@@ -1,6 +1,6 @@
 """Shared constants for the LNA0 v0.1 contracts."""
 
-AGENT_VERSION = "0.1.8"
+AGENT_VERSION = "0.1.9"
 SCHEMA_VERSION = "1"
 GOLDEN_BASE_VERSION = "0.1.0"
 HOUSE_CONFIG_SCHEMA_VERSION = "1"
